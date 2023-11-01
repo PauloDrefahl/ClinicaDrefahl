@@ -526,7 +526,7 @@ strong {
   position: relative;
   z-index: 100;
   font-size: var(--h3-font-size);
-  color: var(--primary-color);
+  color: var(--dark-color);
   display: block;
   text-align: center;
   line-height: 80px;
