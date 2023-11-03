@@ -5,7 +5,7 @@ const form = document.querySelector('form');
 const appointmentList = document.getElementById('appointment-list');
 
 // Function to create a new row with "Delete" button and editable status dropdown
-function createTableRow(date, time, patientName, doctor, status, obs) {
+function createTableRow(date, time, patientName, doctor, status, obs, rowIndex) {
     // Create a new row for the table
     const newRow = document.createElement('tr');
 
@@ -17,6 +17,7 @@ function createTableRow(date, time, patientName, doctor, status, obs) {
         <td>${doctor}</td>
         <td class="status-cell" data-status="${status}">
             <select class="status-dropdown">
+                option value="N/A">N/A</option>
                 <option value="Agendada">Agendada</option>
                 <option value="Retorno">Retorno</option>
                 <option value="Curativo">Curativo</option>
@@ -42,20 +43,82 @@ function createTableRow(date, time, patientName, doctor, status, obs) {
     deleteButton.addEventListener('click', function() {
         // Remove the row when the delete button is clicked
         newRow.remove();
+
+        // Remove the corresponding appointment from local storage
+        appointments.splice(rowIndex, 1);
+        updateLocalStorage();
+
+        // Update the table to reflect the deletion
+        updateTable();
     });
 
     // Create an event listener to handle status changes
     statusDropdown.addEventListener('change', function() {
         const selectedStatus = statusDropdown.value;
+        
+        // Update the data-status attribute of the status cell
         newRow.getElementsByClassName('status-cell')[0].setAttribute('data-status', selectedStatus);
+        
+        // Update the corresponding appointment's status in local storage
+        const rowIndex = appointments.findIndex(appointment => 
+            appointment.date === date &&
+            appointment.time === time &&
+            appointment.patientName === patientName &&
+            appointment.doctor === doctor
+        );
+    
+        if (rowIndex !== -1) {
+            appointments[rowIndex].status = selectedStatus;
+            updateLocalStorage();
+        }
     });
 
-    // Create a cell for the "Delete" button and add it to the row
     const deleteButtonCell = document.createElement('td');
     deleteButtonCell.appendChild(deleteButton);
     newRow.appendChild(deleteButtonCell);
 
     return newRow;
+}
+
+// Function to create a new appointment object
+function createAppointment(date, time, patientName, doctor, status, obs) {
+    return {
+        date,
+        time,
+        patientName,
+        doctor,
+        status,
+        obs
+    };
+}
+
+// Function to save appointments to local storage
+function saveAppointments(appointments) {
+    localStorage.setItem('appointments', JSON.stringify(appointments));
+}
+
+// Function to retrieve appointments from local storage
+function getSavedAppointments() {
+    const savedAppointments = localStorage.getItem('appointments');
+    return savedAppointments ? JSON.parse(savedAppointments) : [];
+}
+
+// Initialize appointments from local storage
+let appointments = getSavedAppointments();
+
+// Function to update the table with appointments
+function updateTable() {
+    appointmentList.innerHTML = ''; // Clear the table
+
+    for (const appointment of appointments) {
+        const newRow = createTableRow(appointment.date, appointment.time, appointment.patientName, appointment.doctor, appointment.status, appointment.obs);
+        appointmentList.appendChild(newRow);
+    }
+}
+
+// Function to update local storage with current appointments
+function updateLocalStorage() {
+    saveAppointments(appointments);
 }
 
 // Add a submit event listener to the form for adding appointments
@@ -70,11 +133,17 @@ form.addEventListener('submit', function(event) {
     const status = document.getElementById('status').value;
     const obs = document.getElementById('obs').value;
 
-    // Create a new row with the "Delete" button and editable status dropdown
-    const newRow = createTableRow(date, time, patientName, doctor, status, obs);
+    // Create a new appointment object
+    const newAppointment = createAppointment(date, time, patientName, doctor, status, obs);
 
-    // Append the new row to the table body
-    appointmentList.appendChild(newRow);
+    // Add the new appointment to the appointments array
+    appointments.push(newAppointment);
+
+    // Save the updated appointments to local storage
+    updateLocalStorage();
+
+    // Update the table with the new data
+    updateTable();
 
     // Reset the form fields
     form.reset();
@@ -154,6 +223,16 @@ sortTimeButton.addEventListener('click', function() {
     // Reorder the rows in the table
     rows.forEach(row => appointmentList.appendChild(row));
 });
+
+// Get a reference to the "Show All Appointments" button
+const showAllAppointmentsButton = document.getElementById('show-all-appointments');
+
+// Add a click event listener to the button
+showAllAppointmentsButton.addEventListener('click', function () {
+    updateTable();
+});
+
+// Rest of your code remains unchanged
 
 
 // Initially apply filters to show all appointments
